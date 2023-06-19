@@ -1,0 +1,129 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f docker-compose-resolved.yml
+    kompose.version: 1.28.0 (c4137012e)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: avideo
+  name: avideo
+  namespace: avideo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: avideo
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f docker-compose-resolved.yml
+        kompose.version: 1.28.0 (c4137012e)
+      creationTimestamp: null
+      labels:
+        io.kompose.network/k8s-avideo-app-net: "true"
+        io.kompose.service: avideo
+    spec:
+      hostAliases:
+      - ip: "10.254.4.254"
+        hostnames:
+        - "database"
+      - ip: "10.254.53.99"
+        hostnames:
+        - "database-encoder"
+      containers:
+        - env:
+            - name: CONTACT_EMAIL
+              value: admin@localhost
+            - name: CREATE_TLS_CERTIFICATE
+              value: "yes"
+            - name: DB_MYSQL_HOST
+              value: "database"
+            - name: DB_MYSQL_NAME
+              value: avideo
+            - name: DB_MYSQL_PASSWORD
+              value: avideo
+            - name: DB_MYSQL_PORT
+              value: "3306"
+            - name: DB_MYSQL_USER
+              value: avideo
+            - name: ENABLE_PHPMYADMIN
+              value: "yes"
+            - name: HTTPS_PORT
+              value: "443"
+            - name: HTTP_PORT
+              value: "80"
+            - name: MAIN_LANGUAGE
+              value: en_US
+            - name: NGINX_HTTPS_PORT
+              value: "8443"
+            - name: NGINX_HTTP_PORT
+              value: "8080"
+            - name: NGINX_RTMP_PORT
+              value: "1935"
+            - name: PHPMYADMIN_ENCODER_PORT
+              value: "8082"
+            - name: PHPMYADMIN_PORT
+              value: "8081"
+            - name: SERVER_NAME
+              value: localhost
+            - name: SOCKET_PORT
+              value: "2053"
+            - name: SYSTEM_ADMIN_PASSWORD
+              value: password
+            - name: TLS_CERTIFICATE_FILE
+              value: /etc/apache2/ssl/localhost.crt
+            - name: TLS_CERTIFICATE_KEY
+              value: /etc/apache2/ssl/localhost.key
+            - name: WEBSITE_TITLE
+              value: AVideo
+          image: youcefouarab/avideo:latest
+          securityContext:
+            privileged: true
+          startupProbe:
+            httpGet:
+              path: /
+              port: 80
+            failureThreshold: 20
+            periodSeconds: 30
+            timeoutSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            failureThreshold: 3
+            periodSeconds: 30
+            timeoutSeconds: 10
+          name: avideo
+          ports:
+            - containerPort: 2053
+            - containerPort: 80
+            - containerPort: 443
+          volumeMounts:
+            - mountPath: /var/www/tmp
+              name: avideo-claim0
+            - mountPath: /HLS
+              name: avideo-claim1
+              subPath: AVideo/HLS
+            - mountPath: /var/www/html/AVideo/videos
+              name: avideo-claim3
+              subPath: AVideo/videos
+            - mountPath: /etc/letsencrypt
+              name: avideo-claim5
+              subPath: AVideo/letsencrypt     
+      restartPolicy: Always
+      volumes:
+        - name: avideo-claim0
+          emptyDir: {}
+        - name: avideo-claim1
+          persistentVolumeClaim:
+            claimName: avideo-claim1
+        - name: avideo-claim3
+          persistentVolumeClaim:
+            claimName: avideo-claim3
+        - name: avideo-claim5
+          persistentVolumeClaim:
+            claimName: avideo-claim5
+status: {}

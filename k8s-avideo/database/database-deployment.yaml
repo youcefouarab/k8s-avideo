@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f docker-compose-resolved.yml
+    kompose.version: 1.28.0 (c4137012e)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: database
+  name: database
+  namespace: avideo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: database
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f docker-compose-resolved.yml
+        kompose.version: 1.28.0 (c4137012e)
+      creationTimestamp: null
+      labels:
+        io.kompose.network/k8s-avideo-app-net: "true"
+        io.kompose.service: database
+    spec:
+      containers:
+        - env:
+            - name: MYSQL_DATABASE
+              value: avideo
+            - name: MYSQL_INITDB_SKIP_TZINFO
+              value: "1"
+            - name: MYSQL_PASSWORD
+              value: avideo
+            - name: MYSQL_RANDOM_ROOT_PASSWORD
+              value: "yes"
+            - name: MYSQL_USER
+              value: avideo
+          image: mariadb:latest
+          livenessProbe:
+            exec:
+              command:
+              - bash
+              - -c
+              - mariadb-admin -u avideo -pavideo ping
+            failureThreshold: 3
+            periodSeconds: 30
+            timeoutSeconds: 10
+          name: database
+          resources: {}
+          volumeMounts:
+            - mountPath: /var/lib/mysql
+              name: database-claim0
+              subPath: AVideo/db
+      restartPolicy: Always
+      volumes:
+        - name: database-claim0
+          persistentVolumeClaim:
+            claimName: database-claim0
+status: {}
